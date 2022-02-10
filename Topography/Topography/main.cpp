@@ -123,6 +123,7 @@ HRESULT RenderTerrain(int grid, int polygon, int vertex, int index)
 			pVertex[v].position.x = (float)x;
 			pVertex[v].position.z = (float)z;
 			pVertex[v].position.y = 0.0f;
+
 			v++;
 		} // for
 	} // for
@@ -145,8 +146,28 @@ HRESULT RenderTerrain(int grid, int polygon, int vertex, int index)
 
 	WORD* ib = (WORD*)buffer;
 
-	int a = 0;
-	int b = (grid + 1);
+	int cnt = 0;
+	v = 0;
+
+	for (z = 0; z <= grid; z++)
+	{
+		for (x = 0; x <= grid; x++)
+		{
+			int b = v + (grid + 1);
+
+			ib[cnt++] = v;
+			ib[cnt++] = b + 1;
+			ib[cnt++] = b;
+
+			ib[cnt++] = v;
+			ib[cnt++] = v + 1;
+			ib[cnt++] = b + 1;
+
+			v++;
+		} // for
+	} // for
+
+	g_pIB->Unlock();
 
 	return S_OK;
 } // HRESULT RenderTerrain
@@ -154,8 +175,6 @@ HRESULT RenderTerrain(int grid, int polygon, int vertex, int index)
 HRESULT InitGeometry(int grid, int polygon, int vertex, int index)
 {
 	RenderTerrain(grid, polygon, vertex, index);
-
-	g_pIB->Unlock();
 
 	return S_OK;
 } // HRESULT InitGeometry
