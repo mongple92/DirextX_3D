@@ -62,10 +62,13 @@ HRESULT InitD3D(HWND hWnd)
 
 	// 컬링모드
 	// 컬링모드 기본으로 none으로 설정하면 CCW로 그려진다
-	g_pd3dDevice->SetRenderState(D3DRS_CULLMODE, D3DCULL_CCW);
+	g_pd3dDevice->SetRenderState(D3DRS_CULLMODE, D3DCULL_CW);
 
 	// z버퍼 끄기
 	g_pd3dDevice->SetRenderState(D3DRS_ZENABLE, TRUE);
+
+	// Turn off D3D lighting
+	g_pd3dDevice->SetRenderState(D3DRS_LIGHTING, FALSE);
 
 	return S_OK;
 } // HRESULT InitD3D
@@ -116,22 +119,56 @@ HRESULT RenderTerrain(int grid, int polygon, int vertex, int index)
 	int z = 0;
 	int v = 0;
 
+	// 버텍스 셋팅
 	for (z = 0; z <= grid; z++)
 	{
 		for (x = 0; x <= grid; x++)
 		{
-			pVertex[v].position.x = (float)x;
+			// 위치값
 			pVertex[v].position.z = (float)z;
 			pVertex[v].position.y = 0.0f;
+			pVertex[v].position.x = (float)x;
+
+			// 노말값을 y+방향으로 주도록합니다.
+			const D3DXVECTOR3 vec = D3DXVECTOR3( 0.0f, 1.0f, 0.0f );
+			D3DXVECTOR3 nv;
+			D3DXVec3Normalize( &nv, &vec );
+
+			pVertex[v].normal = nv;
+
+			// u, v를 채웁니다.
+			/*pVertex[v].u = 0.0f;
+			pVertex[v].v = 1.0f;
+
+			pVertex[v + 1].u = 1.0f;
+			pVertex[v + 1].v = 1.0f;
+
+			pVertex[v + grid + 1].u = 0.0f;
+			pVertex[v + grid + 1].v = 0.0f;
+
+			pVertex[v + grid + 2].u = 1.0f;
+			pVertex[v + grid + 2].v = 0.0f;*/
 
 			v++;
 		} // for
 	} // for
 
+	pVertex[v].u = 0.0f;
+	pVertex[v].v = 1.0f;
+
+	pVertex[v + 1].u = 1.0f;
+	pVertex[v + 1].v = 1.0f;
+
+	pVertex[v + grid + 1].u = 0.0f;
+	pVertex[v + grid + 1].v = 0.0f;
+
+	pVertex[v + grid + 2].u = 1.0f;
+	pVertex[v + grid + 2].v = 0.0f;
+
 	g_pVB->Unlock();
 
 	// 인덱스 버퍼를 생성합니다.
-	if (FAILED(g_pd3dDevice->CreateIndexBuffer(index, D3DUSAGE_WRITEONLY,
+	if (FAILED(g_pd3dDevice->CreateIndexBuffer(index * sizeof(vertex), D3DUSAGE_WRITEONLY,
 		D3DFMT_INDEX16, D3DPOOL_DEFAULT, &g_pIB, NULL)))
 	{
 		return E_FAIL;
@@ -147,13 +184,15 @@ HRESULT RenderTerrain(int grid, int polygon, int vertex, int index)
 	WORD* ib = (WORD*)buffer;
 
 	int cnt = 0;
+	int b = 0;
 	v = 0;
 
-	for (z = 0; z <= grid; z++)
+	// 인덱스 셋팅
+	for (z = 0; z < grid; z++)
 	{
-		for (x = 0; x <= grid; x++)
+		for (x = 0; x < grid; x++)
 		{
-			int b = v + (grid + 1);
+			b = v + (grid + 1);
 
 			ib[cnt++] = v;
 			ib[cnt++] = b + 1;
@@ -165,6 +204,9 @@ HRESULT RenderTerrain(int grid, int polygon, int vertex, int index)
 
 			v++;
 		} // for
+
+		v++;
+
 	} // for
 
 	g_pIB->Unlock();
@@ -174,6 +216,17 @@ HRESULT RenderTerrain(int grid, int polygon, int vertex, int index)
 
 HRESULT InitGeometry(int grid, int polygon, int vertex, int index)
 {
+	// Use D3DX to create a texture from a file based image
+	if (FAILED(D3DXCreateTextureFromFile(g_pd3dDevice, L"banana.bmp", &g_pTexture)))
+	{
+		// If texture is not in current folder, try parent folder
+		if (FAILED(D3DXCreateTextureFromFile(g_pd3dDevice, L"..\\banana.bmp", &g_pTexture)))
+		{
+			MessageBox(NULL, L"Could not find banana.bmp", L"Topography.exe", MB_OK);
+			return E_FAIL;
+		}
+	}
+
 	RenderTerrain(grid, polygon, vertex, index);
 
 	return S_OK;
@@ -256,7 +309,7 @@ VOID SetupMatrices()
 	g_pd3dDevice->SetTransform(D3DTS_WORLD, &matWorld);
 
 	// 뷰 행렬을 셋팅합니다.
-	D3DXVECTOR3 vEyePt(0.0F, 5.0F, -10.0F);
+	D3DXVECTOR3 vEyePt( 0.0F, 40.0F, -10.0F);
 	D3DXVECTOR3 vLookAtPt(0.0F, 0.0F, 0.0F);
 	D3DXVECTOR3 vUpVec(0.0F, 1.0F, 0.0F);
 	D3DXMATRIXA16 matView;
@@ -278,7 +331,7 @@ VOID Render(int grid, int polygon, int vertex, int index)
 	if (SUCCEEDED(g_pd3dDevice->BeginScene()))
 	{
 		// 라이트를 셋팅합니다.
-		SetupLight(1, 1, 1);
+		SetupLight(0, 1, 0);
 
 		// 월드, 뷰, 투영 매트릭스를 셋팅합니다.
 		SetupMatrices();
@@ -309,12 +362,12 @@ INT WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, INT)
 	{
 		sizeof(WNDCLASSEX), CS_CLASSDC, MsgProc, 0L, 0L,
 		GetModuleHandle(NULL), NULL, NULL, NULL, NULL,
-		L"D3D Study", NULL
+		L"D3D Topography", NULL
 	};
 	RegisterClassEx(&wc);
 
 	// 윈도우 앱 생성
-	HWND hWnd = CreateWindow(L"D3D Study", L"D3D Study",
+	HWND hWnd = CreateWindow(L"D3D Topography", L"D3D Topography",
 		WS_OVERLAPPEDWINDOW, 100, 100, 800, 800, NULL, NULL, wc.hInstance, NULL);
 
 	// d3d 초기화
@@ -349,6 +402,6 @@ INT WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, INT)
 		} // if
 	} // if
 
-	UnregisterClass(L"D3D Study", wc.hInstance);
+	UnregisterClass(L"D3D Topography", wc.hInstance);
 	return 0;
 } // INT WINAPI wWinMain
