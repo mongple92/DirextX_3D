@@ -68,7 +68,7 @@ HRESULT InitD3D(HWND hWnd)
 	g_pd3dDevice->SetRenderState(D3DRS_ZENABLE, TRUE);
 
 	// Turn off D3D lighting
-	g_pd3dDevice->SetRenderState(D3DRS_LIGHTING, FALSE);
+	g_pd3dDevice->SetRenderState(D3DRS_LIGHTING, TRUE);
 
 	return S_OK;
 } // HRESULT InitD3D
@@ -118,6 +118,7 @@ HRESULT RenderTerrain(int grid, int polygon, int vertex, int index)
 	int x = 0;
 	int z = 0;
 	int v = 0;
+	float uvOffset = (1.0f / (float)grid);
 
 	// 버텍스 셋팅
 	for (z = 0; z <= grid; z++)
@@ -126,10 +127,14 @@ HRESULT RenderTerrain(int grid, int polygon, int vertex, int index)
 		{
 			// 위치값
 			pVertex[v].position.z = (float)z;
-			pVertex[v].position.y = 0.0f;
+			// sin값으로 y값을 준다.
+			float sf = sinf((float)x);
+			float cf = cosf((float)z);
+			//cout << "sinf(%f) : %f * cosf(%f) : %f = %f\n", x, sf, z, cf, sf*cf << endl;
+			pVertex[v].position.y = sf * cf;
 			pVertex[v].position.x = (float)x;
-
-			// 노말값을 y+방향으로 주도록합니다.
+			
+			// 노말값을 일단 y+방향으로 주도록합니다.
 			const D3DXVECTOR3 vec = D3DXVECTOR3( 0.0f, 1.0f, 0.0f );
 			D3DXVECTOR3 nv;
 			D3DXVec3Normalize( &nv, &vec );
@@ -137,34 +142,14 @@ HRESULT RenderTerrain(int grid, int polygon, int vertex, int index)
 			pVertex[v].normal = nv;
 
 			// u, v를 채웁니다.
-			/*pVertex[v].u = 0.0f;
-			pVertex[v].v = 1.0f;
-
-			pVertex[v + 1].u = 1.0f;
-			pVertex[v + 1].v = 1.0f;
-
-			pVertex[v + grid + 1].u = 0.0f;
-			pVertex[v + grid + 1].v = 0.0f;
-
-			pVertex[v + grid + 2].u = 1.0f;
-			pVertex[v + grid + 2].v = 0.0f;*/
+			// 모든 버텍스에 대해서 uv값을 설정해주어야 합니다.
+			pVertex[v].u = x * uvOffset;
+			pVertex[v].v = z * uvOffset;
 
 			v++;
 		} // for
 	} // for
-
-	pVertex[v].u = 0.0f;
-	pVertex[v].v = 1.0f;
-
-	pVertex[v + 1].u = 1.0f;
-	pVertex[v + 1].v = 1.0f;
-
-	pVertex[v + grid + 1].u = 0.0f;
-	pVertex[v + grid + 1].v = 0.0f;
-
-	pVertex[v + grid + 2].u = 1.0f;
-	pVertex[v + grid + 2].v = 0.0f;
-
+	
 	g_pVB->Unlock();
 
 	// 인덱스 버퍼를 생성합니다.
@@ -217,12 +202,12 @@ HRESULT RenderTerrain(int grid, int polygon, int vertex, int index)
 HRESULT InitGeometry(int grid, int polygon, int vertex, int index)
 {
 	// Use D3DX to create a texture from a file based image
-	if (FAILED(D3DXCreateTextureFromFile(g_pd3dDevice, L"banana.bmp", &g_pTexture)))
+	if (FAILED(D3DXCreateTextureFromFile(g_pd3dDevice, L"terrain.png", &g_pTexture)))
 	{
 		// If texture is not in current folder, try parent folder
-		if (FAILED(D3DXCreateTextureFromFile(g_pd3dDevice, L"..\\banana.bmp", &g_pTexture)))
+		if (FAILED(D3DXCreateTextureFromFile(g_pd3dDevice, L"..\\terrain.png", &g_pTexture)))
 		{
-			MessageBox(NULL, L"Could not find banana.bmp", L"Topography.exe", MB_OK);
+			MessageBox(NULL, L"Could not find terrain.png", L"Topography.exe", MB_OK);
 			return E_FAIL;
 		}
 	}
@@ -252,6 +237,11 @@ VOID Cleanup()
 	if (g_pD3D != NULL)
 	{
 		g_pD3D->Release();
+	} // if
+
+	if (g_pTexture != NULL)
+	{
+		g_pTexture->Release();
 	} // if
 
 } // VOID Cleanup
@@ -300,7 +290,7 @@ VOID SetupLight(float r, float g, float b)
 	g_pd3dDevice->SetRenderState(D3DRS_AMBIENT, 0x00202020);
 } // VOID SetupLight
 
-VOID SetupMatrices()
+VOID SetupMatrices( int grid )
 {
 	// 월드 행렬을 셋팅합니다.
 	D3DXMATRIXA16 matWorld;
@@ -308,9 +298,12 @@ VOID SetupMatrices()
 	//D3DXMatrixRotationY(&matWorld, timeGetTime() / 1500.0F);
 	g_pd3dDevice->SetTransform(D3DTS_WORLD, &matWorld);
 
+	float g = (float)grid / 2.0f;
+	D3DXVECTOR3 atVec = D3DXVECTOR3(g, 0.0f, g);
+
 	// 뷰 행렬을 셋팅합니다.
-	D3DXVECTOR3 vEyePt( 0.0F, 40.0F, -10.0F);
-	D3DXVECTOR3 vLookAtPt(0.0F, 0.0F, 0.0F);
+	D3DXVECTOR3 vEyePt( 0.0f, 30.0F, 0.0F);
+	D3DXVECTOR3 vLookAtPt( atVec.x, atVec.y, atVec.z );
 	D3DXVECTOR3 vUpVec(0.0F, 1.0F, 0.0F);
 	D3DXMATRIXA16 matView;
 	D3DXMatrixLookAtLH(&matView, &vEyePt, &vLookAtPt, &vUpVec);
@@ -331,10 +324,10 @@ VOID Render(int grid, int polygon, int vertex, int index)
 	if (SUCCEEDED(g_pd3dDevice->BeginScene()))
 	{
 		// 라이트를 셋팅합니다.
-		SetupLight(0, 1, 0);
+		SetupLight(1, 1, 1);
 
 		// 월드, 뷰, 투영 매트릭스를 셋팅합니다.
-		SetupMatrices();
+		SetupMatrices( grid );
 
 		// 텍스쳐를 셋팅합니다.
 		g_pd3dDevice->SetTexture(0, g_pTexture);
@@ -373,7 +366,7 @@ INT WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, INT)
 	// d3d 초기화
 	if (SUCCEEDED(InitD3D(hWnd)))
 	{
-		int grid = 1;
+		int grid = 10;
 		int vertex = (grid + 1) * (grid + 1);
 		int polygon = grid * grid * 2;
 		int index = polygon * 3;
