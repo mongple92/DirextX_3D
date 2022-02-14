@@ -1,2 +1,4 @@
-﻿  main.cpp
-  Topography.vcxproj -> C:\mongple\DirextX_3D\Topography\Debug\Topography.exe
+﻿C:\mongple\DirextX_3D\Topography\Topography\TestVertexShader.hlsl(24,18-27): error X4502: invalid ps_4_0_level_9_3 output semantic 'POSITION'
+C:\mongple\DirextX_3D\Topography\Topography\TestVertexShader.hlsl(25,17-23): error X4502: invalid ps_4_0_level_9_3 output semantic 'COLOR'
+  
+  compilation failed; no code produced
