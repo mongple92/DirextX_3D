@@ -21,8 +21,8 @@ struct VS_INPUT
 // 여기에서 출력 버텍스는 위치와 컬러 성분을 포함한다.
 struct VS_OUTPUT
 {
-	vector position : POSITION;
-	vector diffuse	: COLOR;
+	vector position   : POSITION;
+	vector diffuse    : COLOR;
 };
 
 // 메인 진입점, 메인 함수는 인자를 통해
