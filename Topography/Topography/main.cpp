@@ -302,7 +302,7 @@ VOID SetupMatrices( int grid )
 	D3DXVECTOR3 atVec = D3DXVECTOR3(g, 0.0f, g);
 
 	// 뷰 행렬을 셋팅합니다.
-	D3DXVECTOR3 vEyePt( 0.0f, 30.0F, 0.0F);
+	D3DXVECTOR3 vEyePt( -atVec.x/2, 30.0F, -atVec.z/2);
 	D3DXVECTOR3 vLookAtPt( atVec.x, atVec.y, atVec.z );
 	D3DXVECTOR3 vUpVec(0.0F, 1.0F, 0.0F);
 	D3DXMATRIXA16 matView;
@@ -366,7 +366,7 @@ INT WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, INT)
 	// d3d 초기화
 	if (SUCCEEDED(InitD3D(hWnd)))
 	{
-		int grid = 10;
+		int grid = 100;
 		int vertex = (grid + 1) * (grid + 1);
 		int polygon = grid * grid * 2;
 		int index = polygon * 3;
